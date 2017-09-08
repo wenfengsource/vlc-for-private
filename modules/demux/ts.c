@@ -2442,6 +2442,17 @@ static void PIDFillFormat( es_format_t *fmt, int i_stream_type )
     case 0x1B:  /* H264 <- check transport syntax/needed descriptor */
         es_format_Init( fmt, VIDEO_ES, VLC_CODEC_H264 );
         break;
+
+// vvv wenfeng 
+    case 0xF1:
+	 es_format_Init( fmt, AUDIO_ES, VLC_CODEC_MULAW ); 
+	    fmt->audio.i_rate = 8000;
+	    fmt->audio.i_original_channels =AOUT_CHAN_CENTER;
+	    fmt->audio.i_physical_channels = AOUT_CHAN_CENTER;
+	    fmt->audio.i_channels = 1;
+	break;
+// ^^^ wenfeng
+
     case 0x24:  /* HEVC */
         es_format_Init( fmt, VIDEO_ES, VLC_CODEC_HEVC );
         break;
