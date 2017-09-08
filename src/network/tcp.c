@@ -32,6 +32,10 @@
 
 #include <vlc_common.h>
 
+// vvv wenfeng
+#include <vlc_access.h>
+// ^^^ wenfeng
+
 #include <errno.h>
 #include <assert.h>
 #include <unistd.h>
@@ -76,9 +80,24 @@ int net_Connect( vlc_object_t *p_this, const char *psz_host, int i_port,
     char            *psz_socks;
     int             i_realport, i_handle = -1;
 
+    access_t     *p_access = (access_t *)p_this;
+    char         *psz_parser=NULL;
+	struct sockaddr_in RecvAddr;
+    int port =0;
+
     int evfd = vlc_object_waitpipe (p_this);
     if (evfd == -1)
         return -1;
+   // vvv wenfeng
+   psz_parser = strchr( p_access->psz_filepath, '=' );   //bindport=***;
+   if( psz_parser != NULL )
+   {
+       psz_parser+=1;
+      // *psz_parser++ = '\0';
+  	   port = atoi( psz_parser ) ;
+	   msg_Dbg( p_this,"tcp bind port %d \n", port);
+   }
+  // ^^^ wenfeng
 
     psz_socks = var_InheritString( p_this, "socks" );
     if( psz_socks != NULL )
@@ -158,6 +177,24 @@ int net_Connect( vlc_object_t *p_this, const char *psz_host, int i_port,
             msg_Dbg( p_this, "socket error: %s", vlc_strerror_c(net_errno) );
             continue;
         }
+
+		// vvv wenfeng
+		if(port !=0)
+		{			
+			RecvAddr.sin_family = AF_INET;
+			RecvAddr.sin_port = htons(port);
+			RecvAddr.sin_addr.s_addr = inet_addr("0.0.0.0");
+
+			int iResult;
+
+			iResult = bind(fd, (SOCKADDR *) & RecvAddr, sizeof (RecvAddr));
+			if(iResult < 0)
+			{
+				msg_Err( p_this, "socket error: binderror \n" );
+				goto next_ai;
+			}
+		}
+       // ^^^ wenfeng
 
         if( connect( fd, ptr->ai_addr, ptr->ai_addrlen ) )
         {
