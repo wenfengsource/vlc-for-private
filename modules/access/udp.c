@@ -50,6 +50,7 @@
  *****************************************************************************/
 static int  Open( vlc_object_t * );
 static void Close( vlc_object_t * );
+static void *Threadsendkeep_alive(void *data);
 
 #define BUFFER_TEXT N_("Receive buffer")
 #define BUFFER_LONGTEXT N_("UDP receive buffer size (bytes)" )
@@ -75,6 +76,8 @@ struct access_sys_t
     size_t fifo_size;
     block_fifo_t *fifo;
     vlc_thread_t thread;
+	vlc_thread_t kplv_thread;
+	int kplv_flag;
 };
 
 /*****************************************************************************
@@ -102,6 +105,14 @@ static int Open( vlc_object_t *p_this )
 
     char *psz_name = strdup( p_access->psz_location );
     char *psz_parser;
+
+    // vvv wenfeng
+    char *psz_parser_nat;
+	char *psz_parser_kplv;
+	char nat_ip[20];
+	int nat_port;
+    // ^^^ wenfeng
+
     const char *psz_server_addr, *psz_bind_addr = "";
     int  i_bind_port = 1234, i_server_port = 0;
 
@@ -152,7 +163,8 @@ static int Open( vlc_object_t *p_this )
 
     sys->fd = net_OpenDgram( p_access, psz_bind_addr, i_bind_port,
                              psz_server_addr, i_server_port, IPPROTO_UDP );
-    free( psz_name );
+  
+	free( psz_name );
     if( sys->fd == -1 )
     {
         msg_Err( p_access, "cannot open socket" );
@@ -165,6 +177,50 @@ static int Open( vlc_object_t *p_this )
         net_Close( sys->fd );
         goto error;
     }
+    // vvv wenfeng
+	psz_parser_nat = strstr(p_access->psz_location, "nat=");
+	msg_Dbg(p_access , "psz_name = %s psz_parser_nat = %s\n", p_access->psz_location, psz_parser_nat);
+
+	memset(nat_ip,0,20);
+	if(psz_parser_nat != NULL)
+	{
+		psz_parser_nat +=4;
+
+		int i=0;	
+		for(i=0; i< 20; i++)
+		{
+			nat_ip[i] = *(psz_parser_nat++);
+			msg_Dbg("nat_ip=[%d]%d \n", i, nat_ip[i]);
+			if(*psz_parser_nat == ':')
+			{	
+				break;
+			}
+		}
+		psz_parser_nat++;
+		msg_Dbg(p_access , "psz_parser_nat--- = %s \n", psz_parser_nat);
+
+		nat_port = atoi(psz_parser_nat);
+
+		msg_Dbg(p_access , "nat_ip = %s nat_port = %d\n", nat_ip, nat_port);
+
+		struct sockaddr_in RecvAddr;
+	 	int iResult;
+	 	RecvAddr.sin_family = AF_INET;
+		RecvAddr.sin_port = htons(nat_port);
+		RecvAddr.sin_addr.s_addr = inet_addr(nat_ip);
+
+	  
+	   iResult = sendto(sys->fd,
+		                 "helloword", 10, 0, (SOCKADDR *) &RecvAddr, sizeof (RecvAddr));
+		if (iResult == -1) {
+		    msg_Dbg( p_access, "sendto failed with error: %d\n", WSAGetLastError());
+		 
+		}
+		 
+	} 
+
+ 
+    // ^^^ wenfeng
 
     sys->fifo_size = var_InheritInteger( p_access, "udp-buffer");
 
@@ -177,10 +233,91 @@ error:
         free( sys );
         return VLC_EGENERIC;
     }
+	
+	// vvv wenfeng
+	psz_parser_kplv = strstr( p_access->psz_location, "kplv=");
+	if(psz_parser_kplv !=  NULL)
+	{
+ 	    vlc_clone( &sys->kplv_thread, Threadsendkeep_alive, p_access,
+                   VLC_THREAD_PRIORITY_INPUT ) ;
+	    sys->kplv_flag = 1;
+	}
+	else
+	{
+		 sys->kplv_flag = 0;
+	}
+    // ^^^ wenfeng
+	 
 
     return VLC_SUCCESS;
 }
 
+
+// vvv wenfeng
+static void *Threadsendkeep_alive(void *data)
+{
+    access_t *access = data;
+    access_sys_t *sys = access->p_sys;
+ 	struct sockaddr_in RecvAddr;
+
+  char *psz_name = strdup( access->psz_location );
+  char *psz_parser;
+	char kplv_ip[20];
+	int kplv_port;	
+	psz_parser = strstr(psz_name, "kplv=");
+
+	memset(kplv_ip, 0 ,20);
+
+	if(psz_parser != NULL)
+	{
+		psz_parser +=5;
+
+		int i=0;	
+		for(i=0; i< 20; i++)
+		{
+			kplv_ip[i] = *(psz_parser++);
+
+			if(*psz_parser == ':')
+			{	
+				break;
+			}
+		}
+
+	}
+	psz_parser++;
+	kplv_port = atoi(psz_parser);
+	msg_Dbg(access , "keep_ip = %s keep_port = %d\n", kplv_ip, kplv_port);
+ 
+
+ 	RecvAddr.sin_family = AF_INET;
+    RecvAddr.sin_port = htons(kplv_port);
+    RecvAddr.sin_addr.s_addr = inet_addr(kplv_ip);
+
+   int iResult;
+  
+
+   for(;;)
+   	{
+  
+	   iResult = sendto(sys->fd,
+		                 "helloword", 10, 0, (SOCKADDR *) & RecvAddr, sizeof (RecvAddr));
+		if (iResult == -1) {
+		    msg_Dbg( access, "sendto failed with error: %d\n", WSAGetLastError());
+
+		}
+		msleep(3000000);
+
+	  
+	  
+		//  msg_Dbg( access, "hello word length = %d	\n", bytesSent);
+		
+		if( errno == EINTR )
+		   break;
+
+   	}
+  
+}
+// ^^^ wenfeng
 /*****************************************************************************
  * Close: free unused data structures
  *****************************************************************************/
@@ -188,6 +325,12 @@ static void Close( vlc_object_t *p_this )
 {
     access_t     *p_access = (access_t*)p_this;
     access_sys_t *sys = p_access->p_sys;
+
+	if(sys->kplv_flag == 1)
+	{
+    	vlc_cancel( sys->kplv_thread );
+    	vlc_join( sys->kplv_thread, NULL );
+	}
 
     vlc_cancel( sys->thread );
     vlc_join( sys->thread, NULL );
