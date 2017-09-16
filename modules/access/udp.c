@@ -190,7 +190,7 @@ static int Open( vlc_object_t *p_this )
 		for(i=0; i< 20; i++)
 		{
 			nat_ip[i] = *(psz_parser_nat++);
-			msg_Dbg("nat_ip=[%d]%d \n", i, nat_ip[i]);
+			//msg_Dbg("nat_ip=[%d]%d \n", i, nat_ip[i]);
 			if(*psz_parser_nat == ':')
 			{	
 				break;
