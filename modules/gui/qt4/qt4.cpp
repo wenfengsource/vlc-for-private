@@ -495,7 +495,7 @@ static void *Thread( void *obj )
 #else
             QSettings::NativeFormat,
 #endif
-            QSettings::UserScope, "vlc", "vlc-qt-interface" );
+            QSettings::UserScope, "vlc", "JY-qt-interface" );
 
     /* Icon setting, Mac uses icon from .icns */
 #ifndef Q_OS_MAC

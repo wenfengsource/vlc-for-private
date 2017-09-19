@@ -1,7 +1,6 @@
 #!/bin/sh
 
 OPTIONS="
-      --enable-update-check
       --enable-lua
       --enable-faad
       --enable-flac
@@ -9,23 +8,30 @@ OPTIONS="
       --enable-twolame
       --enable-quicktime
       --enable-avcodec --enable-merge-ffmpeg
-      --enable-dca
-      --enable-mpc
-      --enable-libass
-      --enable-x264
-      --enable-schroedinger
-      --enable-realrtsp
       --enable-live555
-      --enable-dvdread
-      --enable-shout
-      --enable-goom
       --enable-caca
       --disable-sdl
       --enable-qt
-      --enable-skins2
       --enable-sse --enable-mmx
       --enable-libcddb
-      --enable-zvbi --disable-telx
+      --disable-telx
+      --disable-upnp 
+      --disable-mtp 
+      --disable-bonjour 
+      --disable-update-check 
+      --disable-libxml2 
+		--disable-vorbis 
+		--disable-speex 
+		--disable-opus 
+		--disable-theora 
+		--disable-schroedinger 
+		--disable-x265 
+		--disable-x26410b 
+		--disable-x264 
+		--disable-mfx 
+		--disable-zvbi 
+		--disable-telx 
+		--disable-kate
       --enable-nls"
 
 if gcc -v 2>/dev/null -a echo | gcc -mno-cygwin -E -2>/dev/null 2>&1
