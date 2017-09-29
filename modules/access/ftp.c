@@ -147,6 +147,9 @@ struct access_sys_t
 #define GET_OUT_SYS( p_this ) \
     ((access_sys_t *)(((sout_access_out_t *)(p_this))->p_sys))
 
+
+	static int fd_back =-1;
+
 static int ftp_SendCommand( vlc_object_t *obj, access_sys_t *sys,
                             const char *fmt, ... )
 {
@@ -309,10 +312,23 @@ static void clearCmdTLS( access_sys_t *p_sys )
 static int Login( vlc_object_t *p_access, access_sys_t *p_sys )
 {
     int i_answer;
-
+  // vvv wenfeng
+	if(fd_back >0)
+	{
+ 		p_sys->cmd.fd = fd_back;
+		while( ftp_RecvCommand( p_access, p_sys, &i_answer, NULL ) == 1 );   // clear all reserve buff data
+		return ;
+	}
+  // ^^^ wenfeng	
     /* *** Open a TCP connection with server *** */
     int fd = p_sys->cmd.fd = net_ConnectTCP( p_access, p_sys->url.psz_host,
                                              p_sys->url.i_port );
+					     
+     //  vvv wenfeng 
+	fd_back = fd;
+	msg_Dbg( p_access ,"fd_back = %d \n", fd_back);
+     // ^^^ wenfeng
+     	
     if( fd == -1 )
     {
         msg_Err( p_access, "connection failed" );
@@ -554,7 +570,9 @@ static int Connect( vlc_object_t *p_access, access_sys_t *p_sys )
 
 error:
     clearCmdTLS( p_sys );
-    net_Close( p_sys->cmd.fd );
+     net_Close( p_sys->cmd.fd );
+		fd_back = -1;   // wenfeng
+	
     return -1;
 }
 
@@ -705,6 +723,8 @@ static int OutOpen( vlc_object_t *p_this )
         msg_Err( p_access, "cannot store file" );
         clearCmdTLS( p_sys );
         net_Close( p_sys->cmd.fd );
+		fd_back = -1;   // wenfeng
+
         goto exit_error;
     }
 
@@ -728,7 +748,8 @@ static void Close( vlc_object_t *p_access, access_sys_t *p_sys )
 {
     msg_Dbg( p_access, "stopping stream" );
     ftp_StopStream( p_access, p_sys );
-
+// vvv wenfeng
+/*
     if( ftp_SendCommand( p_access, p_sys, "QUIT" ) < 0 )
     {
         msg_Warn( p_access, "cannot quit" );
@@ -740,7 +761,8 @@ static void Close( vlc_object_t *p_access, access_sys_t *p_sys )
 
     clearCmdTLS( p_sys );
     net_Close( p_sys->cmd.fd );
-
+*/
+// ^^^ wenfeng
     /* free memory */
     vlc_UrlClean( &p_sys->url );
     free( p_sys );
@@ -798,6 +820,12 @@ static int OutSeek( sout_access_out_t *p_access, off_t i_pos )
 static ssize_t Read( access_t *p_access, uint8_t *p_buffer, size_t i_len )
 {
     access_sys_t *p_sys = p_access->p_sys;
+	// vvv wenfeng   // ftp seek, the socket will close then open again 
+    if(p_sys->data.fd == -1)
+	{
+		return 0;
+	}
+	// ^^^ wenfeng
 
     assert( p_sys->data.fd != -1 );
     assert( !p_sys->out );
@@ -879,7 +907,7 @@ static int Control( access_t *p_access, int i_query, va_list args )
             break;
         case ACCESS_CAN_FASTSEEK:
             pb_bool = (bool*)va_arg( args, bool* );
-            *pb_bool = false;
+            *pb_bool = true;  // wenfeng false -> true   // FTP Seek
             break;
         case ACCESS_CAN_PAUSE:
             pb_bool = (bool*)va_arg( args, bool* );
