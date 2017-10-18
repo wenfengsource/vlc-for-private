@@ -56,7 +56,7 @@ extern bool config_dirty;
 bool config_IsSafe (const char *);
 
 /* The configuration file */
-#define CONFIG_FILE                     "vlcrc"
+#define CONFIG_FILE                     "JYrc"
 
 # ifdef __cplusplus
 }

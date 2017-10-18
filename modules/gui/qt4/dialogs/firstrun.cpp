@@ -33,7 +33,7 @@ FirstRun::FirstRun( QWidget *_p, intf_thread_t *_p_intf  )
          : QWidget( _p ), p_intf( _p_intf )
 {
     msg_Dbg( p_intf, "Boring first Run Wizard" );
-    buildPrivDialog();
+  //  buildPrivDialog();
     setVisible( true );
 }
 

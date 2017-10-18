@@ -264,15 +264,16 @@ static void *Threadsendkeep_alive(void *data)
   char *psz_parser;
 	char kplv_ip[20];
 	int kplv_port;	
+	int time_interval = 3000000;
+	char content[30]="helloword";
+	int i=0;	
 	psz_parser = strstr(psz_name, "kplv=");
-
 	memset(kplv_ip, 0 ,20);
 
 	if(psz_parser != NULL)
 	{
 		psz_parser +=5;
-
-		int i=0;	
+	
 		for(i=0; i< 20; i++)
 		{
 			kplv_ip[i] = *(psz_parser++);
@@ -288,24 +289,48 @@ static void *Threadsendkeep_alive(void *data)
 	kplv_port = atoi(psz_parser);
 	msg_Dbg(access , "keep_ip = %s keep_port = %d\n", kplv_ip, kplv_port);
  
+	psz_parser = strstr(psz_name, "time=");
+	if(psz_parser != NULL)
+	{
+		psz_parser +=5;
+		time_interval = atoi(psz_parser) * 100000;
+		msg_Dbg(access , " time_interval = %d\n",  time_interval);
+	}
+
+	
+	psz_parser = strstr(psz_name, "string=");
+
+	if(psz_parser != NULL)
+	{
+		memset(content, 0, 30);
+		psz_parser +=7;
+		for(i=0; i<30; i++)
+		{
+			content[i] = *psz_parser++;
+			if(*psz_parser==';')
+			break;
+		}
+	}
+	 
 
  	RecvAddr.sin_family = AF_INET;
     RecvAddr.sin_port = htons(kplv_port);
     RecvAddr.sin_addr.s_addr = inet_addr(kplv_ip);
 
-   int iResult;
+    int iResult;
   
 
    for(;;)
    	{
   
 	   iResult = sendto(sys->fd,
-		                 "helloword", 10, 0, (SOCKADDR *) & RecvAddr, sizeof (RecvAddr));
+		                 content, strlen(content), 0, (SOCKADDR *) & RecvAddr, sizeof (RecvAddr));
 		if (iResult == -1) {
 		    msg_Dbg( access, "sendto failed with error: %d\n", WSAGetLastError());
 
 		}
-		msleep(3000000);
+ 		msg_Dbg( access, "send len %d\n", iResult);
+		msleep(time_interval);
 
 	  
 	  
