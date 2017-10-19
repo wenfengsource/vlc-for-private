@@ -265,8 +265,9 @@ static void *Threadsendkeep_alive(void *data)
 	char kplv_ip[20];
 	int kplv_port;	
 	int time_interval = 3000000;
-	char content[30]="helloword";
+	char content[40]="helloword";
 	int i=0;	
+	int len =0;
 	psz_parser = strstr(psz_name, "kplv=");
 	memset(kplv_ip, 0 ,20);
 
@@ -302,7 +303,7 @@ static void *Threadsendkeep_alive(void *data)
 
 	if(psz_parser != NULL)
 	{
-		memset(content, 0, 30);
+		memset(content, 0, 40);
 		psz_parser +=7;
 		for(i=0; i<30; i++)
 		{
@@ -312,6 +313,18 @@ static void *Threadsendkeep_alive(void *data)
 		}
 	}
 	 
+	psz_parser = strstr(psz_name, "strlen=");
+	if(psz_parser != NULL)
+	{
+		psz_parser +=7;
+		len = atoi(psz_parser) ;
+		msg_Dbg(access , " len = %d\n",  len);
+	}
+	else
+	{
+		len = strlen(content);
+	}
+
 
  	RecvAddr.sin_family = AF_INET;
     RecvAddr.sin_port = htons(kplv_port);
@@ -324,7 +337,7 @@ static void *Threadsendkeep_alive(void *data)
    	{
   
 	   iResult = sendto(sys->fd,
-		                 content, strlen(content), 0, (SOCKADDR *) & RecvAddr, sizeof (RecvAddr));
+		                 content, len, 0, (SOCKADDR *) & RecvAddr, sizeof (RecvAddr));
 		if (iResult == -1) {
 		    msg_Dbg( access, "sendto failed with error: %d\n", WSAGetLastError());
 
