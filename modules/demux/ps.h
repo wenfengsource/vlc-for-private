@@ -82,6 +82,7 @@ static inline int ps_track_fill( ps_track_t *tk, ps_psm_t *p_psm, int i_id )
 {
     tk->i_skip = 0;
     tk->i_id = i_id;
+
     if( ( i_id&0xff00 ) == 0xbd00 )
     {
         if( ( i_id&0xf8 ) == 0x88 || (i_id&0xf8) == 0x98 )
@@ -89,12 +90,14 @@ static inline int ps_track_fill( ps_track_t *tk, ps_psm_t *p_psm, int i_id )
             es_format_Init( &tk->fmt, AUDIO_ES, VLC_CODEC_DTS );
             tk->i_skip = 4;
         }
-        else if( ( i_id&0xf0 ) == 0x80
-               ||  (i_id&0xf0) == 0xc0 ) /* AC-3, Can also be used for DD+/E-AC-3 */
-        {
-            es_format_Init( &tk->fmt, AUDIO_ES, VLC_CODEC_A52 );
-            tk->i_skip = 4;
+         else if( ( i_id&0xf0 ) == 0x80
+                ||  (i_id&0xf0) == 0xc0 ) /* AC-3, Can also be used for DD+/E-AC-3 */
+         {
+             es_format_Init( &tk->fmt, AUDIO_ES, VLC_CODEC_A52 );
+             tk->i_skip = 4;
         }
+     
+
         else if( (i_id&0xf0) == 0xb0 )
         {
             es_format_Init( &tk->fmt, AUDIO_ES, VLC_CODEC_MLP );
@@ -122,6 +125,7 @@ static inline int ps_track_fill( ps_track_t *tk, ps_psm_t *p_psm, int i_id )
         {
             es_format_Init( &tk->fmt, SPU_ES, VLC_CODEC_TELETEXT );
         }
+		
         else
         {
             es_format_Init( &tk->fmt, UNKNOWN_ES, 0 );
@@ -163,7 +167,7 @@ static inline int ps_track_fill( ps_track_t *tk, ps_psm_t *p_psm, int i_id )
     else
     {
         int i_type = ps_id_to_type( p_psm , i_id );
-
+	//	printf("^^^^^id =%02x   ^^i_type = %02x \n ", i_id , i_type);
         es_format_Init( &tk->fmt, UNKNOWN_ES, 0 );
 
         if( (i_id&0xf0) == 0xe0 && i_type == 0x1b )
@@ -195,6 +199,27 @@ static inline int ps_track_fill( ps_track_t *tk, ps_psm_t *p_psm, int i_id )
         {
                 es_format_Init( &tk->fmt, VIDEO_ES, VLC_CODEC_H264 );
         }
+
+      // vvv wenfeng
+  		else if(( i_id&0xff ) == 0xc0 && i_type == 0x91)
+        {
+		     es_format_Init( &tk->fmt, AUDIO_ES, VLC_CODEC_MULAW );   //  
+			tk->fmt.audio.i_rate = 8000;
+			tk->fmt.audio.i_original_channels =AOUT_CHAN_CENTER;
+			tk->fmt.audio.i_physical_channels = AOUT_CHAN_CENTER;
+			tk->fmt.audio.i_channels = 1;
+        }		
+  		else if(( i_id&0xff ) == 0xc0 && i_type == 0x90)
+        {
+		     printf("^^^^^^^^^^^^ \n");
+		     es_format_Init( &tk->fmt, AUDIO_ES, VLC_CODEC_ALAW );   //  
+			tk->fmt.audio.i_rate = 8000;
+			tk->fmt.audio.i_original_channels =AOUT_CHAN_CENTER;
+			tk->fmt.audio.i_physical_channels = AOUT_CHAN_CENTER;
+			tk->fmt.audio.i_channels = 1;
+        }
+		// ^^^ wenfeng
+
 
 
         if( tk->fmt.i_cat == UNKNOWN_ES && ( i_id&0xf0 ) == 0xe0 )

@@ -1741,7 +1741,7 @@ static void ParsePES( demux_t *p_demux, ts_pid_t *pid, block_t *p_pes )
 			tmp3 = (unsigned char) (len >> 11) && 0x03;	  // byte 4 2 bit
 			tmp4 = (unsigned char)(len & 0x0007);
 
-			printf("len = %d  size = %d \n" , len  ,  p_block->i_buffer);
+			//printf("len = %d  size = %d \n" , len  ,  p_block->i_buffer);
 
 
 			block_t * tmp;
@@ -2536,8 +2536,13 @@ static void PIDFillFormat( es_format_t *fmt, int i_stream_type )
         es_format_Init( fmt, AUDIO_ES, VLC_CODEC_EAC3 );
         break;
 
-    case 0x91:  /* A52 vls (audio) */
-        es_format_Init( fmt, AUDIO_ES, VLC_FOURCC( 'a', '5', '2', 'b' ) );
+    case 0x91:  /* A52 vls (audio) */  // For HIKVISION
+	 	es_format_Init( fmt, AUDIO_ES, VLC_CODEC_MULAW );   // wenfeng
+	    fmt->audio.i_rate = 8000;
+	    fmt->audio.i_original_channels =AOUT_CHAN_CENTER;
+	    fmt->audio.i_physical_channels = AOUT_CHAN_CENTER;
+	    fmt->audio.i_channels = 1;
+       // es_format_Init( fmt, AUDIO_ES, VLC_FOURCC( 'a', '5', '2', 'b' ) );
         break;
     case 0x92:  /* DVD_SPU vls (sub) */
         es_format_Init( fmt, SPU_ES, VLC_FOURCC( 's', 'p', 'u', 'b' ) );
