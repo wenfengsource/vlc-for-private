@@ -143,6 +143,12 @@ struct access_sys_t
     bool       out;
     bool       directory;
     uint64_t   size;
+
+	// vvv wenfeng	
+	vlc_thread_t kplv_thread;
+	int kplv_flag;
+	// ^^^ wenfeng
+
 };
 #define GET_OUT_SYS( p_this ) \
     ((access_sys_t *)(((sout_access_out_t *)(p_this))->p_sys))
@@ -764,6 +770,17 @@ static void Close( vlc_object_t *p_access, access_sys_t *p_sys )
 */
 // ^^^ wenfeng
     /* free memory */
+
+     // vvv wenfeng
+		if(p_sys->kplv_flag  ==1)
+		{
+			p_sys->kplv_flag = 0;
+			printf("exit keep alive \n");
+			vlc_cancel( p_sys->kplv_thread );	
+			vlc_join( p_sys->kplv_thread, NULL );
+		}
+	// ^^^ wenfeng
+
     vlc_UrlClean( &p_sys->url );
     free( p_sys );
 }
@@ -891,6 +908,24 @@ static ssize_t Write( sout_access_out_t *p_access, block_t *p_buffer )
 }
 #endif
 
+
+// vvv wenfeng
+static void *Threadsendkeep_alive(access_t *p_access)
+{
+	access_sys_t *sys = p_access->p_sys;
+
+	while(sys->kplv_flag ==1)
+	{
+		Seek( p_access, p_access->info.i_pos );
+		msleep(2000000);
+
+		if( errno == EINTR )
+		   break;
+	}
+}
+// ^^^ wenfeng
+
+
 /*****************************************************************************
  * Control:
  *****************************************************************************/
@@ -928,11 +963,32 @@ static int Control( access_t *p_access, int i_query, va_list args )
             break;
 
         case ACCESS_SET_PAUSE_STATE:
-            pb_bool = (bool*)va_arg( args, bool* );
-            if ( !pb_bool )
-              return Seek( p_access, p_access->info.i_pos );
-            break;
+             pb_bool = (bool*)va_arg( args, bool* );
 
+			printf("ACCESS_SET_PAUSE_STATE = %02x \n", i_query);
+			// vvv wenfeng  under pause states, send seek action to keep alive
+		    access_sys_t *sys = p_access->p_sys;
+			if(pb_bool)
+			{	
+
+				//access_t     *p_access = (access_t*)p_this;
+				
+				sys->kplv_flag = 1;
+
+	 	   		 vlc_clone( &sys->kplv_thread, Threadsendkeep_alive, p_access,
+                   VLC_THREAD_PRIORITY_INPUT ) ;
+			}
+			// ^^^ wenfeng
+
+            if ( !pb_bool )
+			{
+				sys->kplv_flag  = 0;
+				vlc_cancel( sys->kplv_thread );
+    			vlc_join( sys->kplv_thread, NULL );
+
+              return Seek( p_access, p_access->info.i_pos );
+			}
+			break;
         default:
             return VLC_EGENERIC;
 
