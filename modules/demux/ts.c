@@ -1728,67 +1728,7 @@ static void ParsePES( demux_t *p_demux, ts_pid_t *pid, block_t *p_pes )
             es_out_Control( p_demux->out, ES_OUT_SET_GROUP_PCR,
                     pid->i_owner_number, p_block->i_pts);
 
-
-		// vvv wenfeng
-		if(pid->i_pid == 274 && pid->es->fmt.i_codec == VLC_CODEC_MP4A)
-		{
-
-			short len , tmp1, tmp2 ;
-			size_t tmp3 ,tmp4,  tmp5;
-			tmp1 = ((short)(p_block->p_buffer[2])) << 8;
-			tmp2 = (short)(p_block->p_buffer[3]);
-			len =  ((tmp1 | tmp2) >> 3) + 7;
-			tmp3 = (unsigned char) (len >> 11) && 0x03;	  // byte 4 2 bit
-			tmp4 = (unsigned char)(len & 0x0007);
-
-			//printf("len = %d  size = %d \n" , len  ,  p_block->i_buffer);
-
-
-			block_t * tmp;
-		 	//tmp = block_Alloc(p_block->i_buffer + 3);
-			tmp = block_Alloc(len);
-			tmp->i_flags = p_block->i_flags;
-		    tmp->i_pts   = p_block->i_pts;
-		    tmp->i_dts   = p_block->i_dts;
-		    tmp->i_length = i_length;
-
-			tmp->p_buffer[0] = 0xff;
-			tmp->p_buffer[1] = 0xf1;
-
-			tmp5 = 5;  // freq 5-> 32kHZ  3->48k 4-> 44.1k   8->16k
-			tmp->p_buffer[2] = 0x40;
-			tmp->p_buffer[2] = tmp->p_buffer[2] | (tmp5 << 2);
-						
-
-			tmp->p_buffer[6] = 0xFC;
-
-			tmp->p_buffer[3] = 0x40;
-
-			
-			tmp->p_buffer[4] = (unsigned char) (len >> 3);
-
-			tmp->p_buffer[5] = (tmp4 << 5) | 0x1f;
-			
-	//int i_frame_size;
-   // i_frame_size = ((tmp->p_buffer[3] & 0x03) << 11) | (tmp->p_buffer[4] << 3) | ((tmp->p_buffer[5] >> 5) /*& 0x7*/);
-
-
-			memcpy( tmp->p_buffer+7, p_block->p_buffer + 4, len -7 );
-			  
-  			  /* free p_block */
-   			 block_ChainRelease(p_block);
-	//printf("tmp.ibuffer = %d  i_frame_size = %d \n" ,   tmp->i_buffer , i_frame_size);
-			//  printf("buf %02x %02x %02x %02x %02x %02x %02x\n", tmp->p_buffer[0], tmp->p_buffer[1] ,tmp->p_buffer[2], tmp->p_buffer[3],tmp->p_buffer[4],tmp->p_buffer[5],tmp->p_buffer[6]);
-			 es_out_Send( p_demux->out, pid->es->id, tmp);
-
-			
-		}
-		else
-		{
-			es_out_Send( p_demux->out, pid->es->id, p_block );
-		}
-       // es_out_Send( p_demux->out, pid->es->id, p_block );
-// ^^^ wenfeng
+        es_out_Send( p_demux->out, pid->es->id, p_block );
     }
     else
     {
@@ -2536,13 +2476,8 @@ static void PIDFillFormat( es_format_t *fmt, int i_stream_type )
         es_format_Init( fmt, AUDIO_ES, VLC_CODEC_EAC3 );
         break;
 
-    case 0x91:  /* A52 vls (audio) */  // For HIKVISION
-	 	es_format_Init( fmt, AUDIO_ES, VLC_CODEC_MULAW );   // wenfeng
-	    fmt->audio.i_rate = 8000;
-	    fmt->audio.i_original_channels =AOUT_CHAN_CENTER;
-	    fmt->audio.i_physical_channels = AOUT_CHAN_CENTER;
-	    fmt->audio.i_channels = 1;
-       // es_format_Init( fmt, AUDIO_ES, VLC_FOURCC( 'a', '5', '2', 'b' ) );
+    case 0x91:  /* A52 vls (audio) */
+        es_format_Init( fmt, AUDIO_ES, VLC_FOURCC( 'a', '5', '2', 'b' ) );
         break;
     case 0x92:  /* DVD_SPU vls (sub) */
         es_format_Init( fmt, SPU_ES, VLC_FOURCC( 's', 'p', 'u', 'b' ) );
