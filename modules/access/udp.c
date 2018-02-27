@@ -77,6 +77,10 @@ struct access_sys_t
     block_fifo_t *fifo;
     vlc_thread_t thread;
 	vlc_thread_t kplv_thread;
+
+     SOCKADDR from;
+     int rec_flag;
+
 	int kplv_flag;
 };
 
@@ -336,8 +340,18 @@ static void *Threadsendkeep_alive(void *data)
    for(;;)
    	{
   
-	   iResult = sendto(sys->fd,
+
+		if(sys->rec_flag == 1)
+	   {
+    	    iResult = sendto(sys->fd,
+		                 content, len, 0, (SOCKADDR *) &sys->from, sizeof (RecvAddr));
+       }
+		else
+		{
+		   iResult = sendto(sys->fd,
 		                 content, len, 0, (SOCKADDR *) & RecvAddr, sizeof (RecvAddr));
+		}
+
 		if (iResult == -1) {
 		    msg_Dbg( access, "sendto failed with error: %d\n", WSAGetLastError());
 
@@ -431,8 +445,38 @@ static void* ThreadRead( void *data )
     access_t *access = data;
     access_sys_t *sys = access->p_sys;
 
+   // vvv wenfeng
+    char tmp[MTU];
+    int n;
+    int SenderAddrSize = sizeof (SOCKADDR);
+   // ^^^ wenfeng
+
     for( ;; )
     {
+
+ 		if(sys->rec_flag != 1 && sys->kplv_flag == 1)
+		{
+			static int cnt=0;
+			n = recvfrom(sys->fd, tmp, MTU, 0, (SOCKADDR*) &sys->from, &SenderAddrSize);
+			if(n > 0)
+			{
+			   sys->rec_flag = 1;
+			//   ioctlsocket (sys->fd, FIONBIO, &(unsigned long){ 1 });
+
+			//	msg_Dbg( access,"Send msg back to IP:[%s] Port:[%d]\n", inet_ntoa(sys->from), ntohs(sys->from));  
+				msg_Dbg( access,"recv remote address ");
+			}
+
+			else if (n == EWOULDBLOCK || n == EAGAIN)  
+			{
+				msg_Dbg( access,"recvfrom timeout");
+			}
+			else
+			{
+			  msg_Dbg( access, "|||||| error %d\n", WSAGetLastError());
+			}
+
+		}
         block_t *pkt;
         ssize_t len;
 
