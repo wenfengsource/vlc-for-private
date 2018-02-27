@@ -68,6 +68,8 @@ VLC_API void vlc_vaLog(vlc_object_t *, int,
                        const char *, const char *, va_list);
 #define msg_GenericVa(a, b, c, d, e) vlc_vaLog(VLC_OBJECT(a), b, c, d, e)
 
+// vvv wenfeng
+#if 0
 #define msg_Info( p_this, ... ) \
     vlc_Log( VLC_OBJECT(p_this), VLC_MSG_INFO, MODULE_STRING, __VA_ARGS__ )
 #define msg_Err( p_this, ... ) \
@@ -76,6 +78,21 @@ VLC_API void vlc_vaLog(vlc_object_t *, int,
     vlc_Log( VLC_OBJECT(p_this), VLC_MSG_WARN, MODULE_STRING, __VA_ARGS__ )
 #define msg_Dbg( p_this, ... ) \
     vlc_Log( VLC_OBJECT(p_this), VLC_MSG_DBG,  MODULE_STRING, __VA_ARGS__ )
+#endif
+
+#define msg_Info( p_this, ... ) \
+     
+#define msg_Err( p_this, ... ) \
+  
+#define msg_Warn( p_this, ... ) \
+    
+#define msg_Dbg( p_this, ... ) \
+  
+// ^^^ wenfeng
+
+#ifndef MODULE_STRING
+# define MODULE_STRING __FILE__
+#endif
 
 #ifndef MODULE_STRING
 # define MODULE_STRING __FILE__
