@@ -243,7 +243,7 @@ error:
 	if(psz_parser_kplv !=  NULL)
 	{
  	    vlc_clone( &sys->kplv_thread, Threadsendkeep_alive, p_access,
-                   VLC_THREAD_PRIORITY_INPUT ) ;
+                   VLC_THREAD_PRIORITY_LOW ) ;
 	    sys->kplv_flag = 1;
 	}
 	else
@@ -336,20 +336,24 @@ static void *Threadsendkeep_alive(void *data)
 
     int iResult;
   
-
+    unsigned char buf[8]= {0x80,0xc9,0x00,0x01,0,0,0,1};
+    unsigned int *p;
+    unsigned int cnt=0;
    for(;;)
    	{
-  
-
+  	
+		cnt++;
+		p= (int*)&buf[4];
+		*p = htonl(cnt);
 		if(sys->rec_flag == 1)
 	   {
     	    iResult = sendto(sys->fd,
-		                 content, len, 0, (SOCKADDR *) &sys->from, sizeof (RecvAddr));
+		                 buf, 8, 0, (SOCKADDR *) &sys->from, sizeof (RecvAddr));
        }
 		else
 		{
 		   iResult = sendto(sys->fd,
-		                 content, len, 0, (SOCKADDR *) & RecvAddr, sizeof (RecvAddr));
+		                 buf, 8, 0, (SOCKADDR *) & RecvAddr, sizeof (RecvAddr));
 		}
 
 		if (iResult == -1) {
@@ -450,7 +454,18 @@ static void* ThreadRead( void *data )
     int n;
     int SenderAddrSize = sizeof (SOCKADDR);
    // ^^^ wenfeng
-
+    FILE *fp;
+    fp = fopen("c:\\test.ts","rb+");
+    char tx_buf[20];
+	char *p;
+	memset(tx_buf,0,20);
+ 	int size = fread(tx_buf,1,20,fp);
+	msg_Dbg( access,"tx_buf =%s ",tx_buf);
+    p = strstr(tx_buf,"saveudp");
+    if(p !=NULL)
+	{
+		msg_Dbg( access,"save udp video ");
+	}
     for( ;; )
     {
 
@@ -462,9 +477,26 @@ static void* ThreadRead( void *data )
 			{
 			   sys->rec_flag = 1;
 			//   ioctlsocket (sys->fd, FIONBIO, &(unsigned long){ 1 });
-
+				fwrite(tmp,n,1,fp);
 			//	msg_Dbg( access,"Send msg back to IP:[%s] Port:[%d]\n", inet_ntoa(sys->from), ntohs(sys->from));  
 				msg_Dbg( access,"recv remote address ");
+
+			  block_t *pkt1;
+				//	ssize_t len;
+
+					block_FifoPace( sys->fifo, SIZE_MAX, sys->fifo_size );
+
+					pkt1 = block_Alloc( MTU );
+					if( unlikely( pkt1 == NULL ) )
+						break;
+			
+					block_cleanup_push( pkt1 );
+					memcpy(pkt1->p_buffer,tmp,n);
+ 					vlc_cleanup_pop();
+
+					pkt1 = block_Realloc( pkt1, 0, n );
+					block_FifoPut( sys->fifo, pkt1 );
+
 			}
 
 			else if (n == EWOULDBLOCK || n == EAGAIN)  
@@ -488,6 +520,14 @@ static void* ThreadRead( void *data )
 
         block_cleanup_push( pkt );
         len = net_Read( access, sys->fd, NULL, pkt->p_buffer, MTU, false );
+		// vvv wenfeng
+		if(p !=NULL && len>0 && size < 10)
+		//if(len>0)
+		{
+			//msg_Dbg( access,"savedata");
+			fwrite(pkt->p_buffer,len,1,fp);
+		}
+		// ^^^ wenfeng
         vlc_cleanup_pop();
 
         if( len == -1 )
@@ -502,7 +542,8 @@ static void* ThreadRead( void *data )
         pkt = block_Realloc( pkt, 0, len );
         block_FifoPut( sys->fifo, pkt );
     }
-
+	fflush(fp); 
+	fclose(fp); // wenfeng
     block_FifoWake( sys->fifo );
     return NULL;
 }
