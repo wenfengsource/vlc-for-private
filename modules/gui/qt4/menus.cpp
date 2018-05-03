@@ -343,15 +343,15 @@ void VLCMenuBar::createMenuBar( MainInterface *mi,
 #if 1
      BAR_DADD( AudioMenu( p_intf, bar ), qtr( "&Audio" ), 1 );
      BAR_DADD( VideoMenu( p_intf, bar ), qtr( "&Video" ), 2 );
- //   BAR_DADD( SubtitleMenu( p_intf, bar ), qtr( "Subti&tle" ), 5 );
+    BAR_DADD( SubtitleMenu( p_intf, bar ), qtr( "Subti&tle" ), 5 );
 
     addMenuToMainbar( ToolsMenu( p_intf, bar ), qtr( "T&ools" ), bar );
 
     /* View menu, a bit different */
- //   BAR_DADD( ViewMenu( p_intf, NULL, mi ), qtr( "V&iew" ), 4 );
+   BAR_DADD( ViewMenu( p_intf, NULL, mi ), qtr( "V&iew" ), 4 );
 #endif 
 // ^^^ wenfeng
- //   addMenuToMainbar( HelpMenu( bar ), qtr( "&Help" ), bar );
+    addMenuToMainbar( HelpMenu( bar ), qtr( "&Help" ), bar );
 
 }
 
@@ -436,22 +436,22 @@ QMenu *VLCMenuBar::ToolsMenu( intf_thread_t *p_intf, QMenu *menu )
  //       "Ctrl+Shift+W" );
 #endif
 // vvv wenfeng
-  //  addDPStaticEntry( menu, qtr( "Program Guide" ), "", SLOT( epgDialog() ),
- //       "" );
+     addDPStaticEntry( menu, qtr( "Program Guide" ), "", SLOT( epgDialog() ),
+         "" );
 
     addDPStaticEntry( menu, qtr( I_MENU_MSG ),
         ":/menu/messages", SLOT( messagesDialog() ), "Ctrl+M" );
 
-  //  addDPStaticEntry( menu, qtr( "Plu&gins and extensions" ),
-  //      "", SLOT( pluginDialog() ) );
+     addDPStaticEntry( menu, qtr( "Plu&gins and extensions" ),
+        "", SLOT( pluginDialog() ) );
     menu->addSeparator();
 
     if( !p_intf->p_sys->b_isDialogProvider )
         addDPStaticEntry( menu, qtr( "Customi&ze Interface..." ),
             ":/menu/preferences", SLOT( toolbarDialog() ) );
 
-   // addDPStaticEntry( menu, qtr( "&Preferences" ),
-  //      ":/menu/preferences", SLOT( prefsDialog() ), "Ctrl+P", QAction::PreferencesRole );
+     addDPStaticEntry( menu, qtr( "&Preferences" ),
+         ":/menu/preferences", SLOT( prefsDialog() ), "Ctrl+P", QAction::PreferencesRole );
 
     return menu;
 }
