@@ -49,8 +49,8 @@ vlc_module_begin ()
     set_category( CAT_INPUT )
     set_subcategory( SUBCAT_INPUT_DEMUX )
     set_description( N_("H264 video demuxer" ) )
-    set_capability( "demux", 0 )
-    add_float( "h264-fps", 25.0, FPS_TEXT, FPS_LONGTEXT, true )
+    set_capability( "demux", 3 )  // wenfeng
+    add_float( "h264-fps", 25.0, FPS_TEXT, FPS_LONGTEXT, true )  //wenfeng
     set_callbacks( Open, Close )
     add_shortcut( "h264" )
 vlc_module_end ()
@@ -81,21 +81,58 @@ static int Open( vlc_object_t * p_this )
     demux_sys_t *p_sys;
     const uint8_t *p_peek;
     es_format_t fmt;
+     int cnt =stream_Peek( p_demux->s, &p_peek, 20480 ) ;
 
-    if( stream_Peek( p_demux->s, &p_peek, 5 ) < 5 ) return VLC_EGENERIC;
+      msg_Dbg( p_demux, "peek cnt %d", cnt);
+  
+    if(cnt < 20480 ) 
+   {   
+     msg_Err( p_demux, " peek only for %d ",cnt);
+      return VLC_EGENERIC;
 
-    if( p_peek[0] != 0x00 || p_peek[1] != 0x00 ||
-        p_peek[2] != 0x00 || p_peek[3] != 0x01 ||
-        (p_peek[4]&0x1F) != 7 ) /* SPS */
+   }
+    //if( p_peek[0] != 0x00 || p_peek[1] != 0x00 ||
+    //    p_peek[2] != 0x00 || p_peek[3] != 0x01 ||
+     //   (p_peek[4]&0x1F) != 7 ) /* SPS */
+      if(1) /* SPS */
+
     {
-        if( !p_demux->b_force )
-        {
-            msg_Warn( p_demux, "h264 module discarded (no startcode)" );
-            return VLC_EGENERIC;
-        }
-
-        msg_Err( p_demux, "this doesn't look like a H264 ES stream, "
-                 "continuing anyway" );
+       // if( !p_demux->b_force )
+       // {
+         //   msg_Warn( p_demux, "h264 module discarded (no startcode)" );
+            //return VLC_EGENERIC;
+       // }
+          int i = 0;
+          int h264flag = 0;
+          int psflag =0;
+        while(i< H264_PACKET_SIZE -4)
+		{ 
+              int tmp = p_peek[i]<<16 | p_peek[i+1] << 8 | p_peek[i+2] ;
+          if(tmp == 0x000001)
+           {
+                 printf("find start code %d \n",p_peek[i+3]);
+             if(((p_peek[i+3] & 0x1f) == 0x01) || (p_peek[i+3] == 0x67))  //  no idr frame or sps 
+             {
+                  h264flag =1;
+             }
+             if(p_peek[i+3] >= 0xb9)
+             {
+                   msg_Err( p_demux, "ps format ");
+                   psflag = 1;
+                    return VLC_EGENERIC; 
+			 }
+             
+           } 
+           i++;
+        } 
+           msg_Dbg( p_demux, "h264flag %d", h264flag);
+         if(h264flag == 0){
+          msg_Warn( p_demux, "h264 module discarded (no startcode)" );
+          return VLC_EGENERIC;
+          }
+          
+       // msg_Err( p_demux, "this doesn't look like a H264 ES stream, "
+        //         "continuing anyway" );
     }
 
     p_demux->pf_demux  = Demux;
@@ -173,7 +210,9 @@ static int Demux( demux_t *p_demux)
 
             p_block_out = p_next;
 
-            p_sys->i_dts += (int64_t)((double)1000000.0 / p_sys->f_fps);
+
+            p_sys->i_dts  =  mdate ();
+          //  p_sys->i_dts += (int64_t)((double)1000000.0 / p_sys->f_fps);
         }
     }
     return 1;
